@@ -1,4 +1,5 @@
 import { useState, useRef } from 'react';
+import { apiFetch } from '../../api/client';
 
 export default function UploadModal({ open, onClose, onBack }) {
   const [file, setFile] = useState(null);
@@ -7,6 +8,8 @@ export default function UploadModal({ open, onClose, onBack }) {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [jobId, setJobId] = useState(null);
+  const [jobStatus, setJobStatus] = useState('idle');
   const fileRef = useRef(null);
 
   const setUploadFile = (f) => setFile(f);
@@ -17,15 +20,61 @@ export default function UploadModal({ open, onClose, onBack }) {
     if (f) setUploadFile(f);
   };
 
-  const handleSubmit = () => {
+  const pollJobStatus = async (id, attempts = 8) => {
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const job = await apiFetch(`/api/jobs/${id}`);
+      setJobStatus(job.status);
+
+      if (job.status === 'completed' || job.status === 'failed') {
+        return job;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+    }
+
+    return null;
+  };
+
+  const handleSubmit = async () => {
     setError('');
-    if (!file) { setError('Please select a video file to upload.'); return; }
-    setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 2200);
+    if (!file) {
+      setError('Please select a video file to upload.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setJobStatus('uploading');
+
+      const formData = new FormData();
+      formData.append('video', file);
+
+      const job = await apiFetch('/api/videos/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      setJobId(job.id);
+      setJobStatus(job.status);
+      await pollJobStatus(job.id);
+      setSuccess(true);
+    } catch (submitError) {
+      console.error('Upload failed:', submitError);
+      setError(submitError.message || 'Failed to upload and queue the footage.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleClose = () => {
-    setFile(null); setCamId(''); setLocation(''); setError(''); setLoading(false); setSuccess(false);
+    setFile(null);
+    setCamId('');
+    setLocation('');
+    setError('');
+    setLoading(false);
+    setSuccess(false);
+    setJobId(null);
+    setJobStatus('idle');
     onClose();
   };
 
@@ -45,7 +94,7 @@ export default function UploadModal({ open, onClose, onBack }) {
               <h4>Footage Queued!</h4>
               <p>
                 <strong style={{ color: '#1A237E' }}>{file?.name}</strong> has been submitted for YOLOv8 analysis.
-                <br />Results will appear in your dashboard within 2–5 minutes.
+                <br />Job ID: <strong>{jobId}</strong> · Current status: <strong>{jobStatus}</strong>
               </p>
               <button className="tw-submit" style={{ width: 'auto', padding: '.7rem 1.8rem', margin: '0 auto' }} onClick={handleClose}>
                 Back to Dashboard →
@@ -94,6 +143,12 @@ export default function UploadModal({ open, onClose, onBack }) {
               <div className="upload-yolo-note">
                 <strong style={{ color: '#1565C0' }}>YOLOv8 Analysis</strong> will detect: No Helmet · Signal Jump · Triple Riding · Wrong Lane — with timestamps and confidence scores.
               </div>
+
+              {jobId && (
+                <div className="upload-yolo-note" style={{ marginTop: '0.6rem' }}>
+                  Job #{jobId} status: <strong>{jobStatus}</strong>
+                </div>
+              )}
 
               {error && <div className="tw-error">{error}</div>}
 

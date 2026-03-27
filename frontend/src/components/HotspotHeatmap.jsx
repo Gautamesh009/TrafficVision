@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 
 const FONT_URL = "https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,400&family=DM+Sans:wght@300;400;500;600&family=Bebas+Neue&display=swap";
 
@@ -234,7 +234,7 @@ export default function HotspotHeatmap() {
   const sorted = [...HOTSPOTS].sort((a,b)=>b.violations-a.violations);
   const maxV   = sorted[0].violations;
   const total  = HOTSPOTS.reduce((s,h)=>s+h.violations,0);
-  const handleSelect = useCallback(h=>setSelected(p=>p?.id===h.id?null:h),[]);
+  const handleSelect = (h) => setSelected((p) => (p?.id === h.id ? null : h));
 
   return (
     <div style={{fontFamily:"'DM Sans',sans-serif",background:"#F4F6F8",minHeight:"100%",color:"#1a2530"}}>

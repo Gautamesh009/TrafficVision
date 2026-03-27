@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { apiFetch, getApiBaseUrl } from '../api/client';
 
 const ChallanSection = () => {
     const [challans, setChallans] = useState([]);
@@ -6,33 +7,31 @@ const ChallanSection = () => {
     const [filter, setFilter] = useState('pending'); // pending, approved, rejected
     const [selectedChallan, setSelectedChallan] = useState(null);
 
-    useEffect(() => {
-        fetchChallans();
-    }, []);
-
-    const fetchChallans = async () => {
+    const fetchChallans = useCallback(async () => {
         try {
-            const response = await fetch('http://localhost:8000/challans');
-            const data = await response.json();
+            setLoading(true);
+            const data = await apiFetch('/challans');
             setChallans(data);
-            setLoading(false);
         } catch (error) {
             console.error('Error fetching challans:', error);
+        } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        fetchChallans();
+    }, [fetchChallans]);
 
     const handleReview = async (id, status) => {
         try {
-            const response = await fetch(`http://localhost:8000/challans/${id}/review`, {
+            await apiFetch(`/challans/${id}/review`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ status })
             });
-            if (response.ok) {
-                fetchChallans(); // Refresh list
-                setSelectedChallan(null);
-            }
+            fetchChallans(); // Refresh list
+            setSelectedChallan(null);
         } catch (error) {
             console.error('Error reviewing challan:', error);
         }
@@ -50,6 +49,7 @@ const ChallanSection = () => {
                     <div>
                         <h1 style={{ fontSize: '20px', fontWeight: 'bold' }}>Challan Review Center</h1>
                         <p style={{ fontSize: '13px', color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>Validate AI-issued citations for enforcement official approval</p>
+                        <p style={{ fontSize: '11px', color: 'rgba(255,255,255,0.28)', marginTop: '6px' }}>API: {getApiBaseUrl()}</p>
                     </div>
                     <div style={{ display: 'flex', gap: '8px' }}>
                         <div style={{ background: 'rgba(232, 93, 38, 0.1)', border: '1px solid rgba(232, 93, 38, 0.3)', padding: '6px 12px', borderRadius: '4px' }}>

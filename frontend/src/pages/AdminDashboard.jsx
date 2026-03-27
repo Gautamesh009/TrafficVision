@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import HotspotHeatmap from '../components/HotspotHeatmap';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
@@ -38,7 +38,7 @@ const ZONES = [
 ];
 
 export default function AdminDashboard({ onOpenModal }) {
-  const { currentUser, signOut } = useAuth();
+  const { signOut } = useAuth();
   const [violations, setViolations] = useState(INITIAL_VIOLATIONS);
   const [agentLogs, setAgentLogs] = useState(INITIAL_AGENTS);
   const [time, setTime] = useState(new Date().toLocaleTimeString('en-IN', { hour12: false }));
@@ -78,12 +78,6 @@ export default function AdminDashboard({ onOpenModal }) {
     return () => clearInterval(timer);
   }, [tlPhase]);
 
-  // Simulation Effect
-  useEffect(() => {
-    const demoTimer = setInterval(triggerDemo, 14000);
-    return () => clearInterval(demoTimer);
-  }, []);
-
   const triggerDemo = () => {
     const randomV = INITIAL_VIOLATIONS[Math.floor(Math.random() * INITIAL_VIOLATIONS.length)];
     const newV = {
@@ -119,6 +113,14 @@ export default function AdminDashboard({ onOpenModal }) {
       }, i * 600);
     });
   };
+
+  // Simulation Effect
+  useEffect(() => {
+    const demoTimer = setInterval(() => {
+      triggerDemo();
+    }, 14000);
+    return () => clearInterval(demoTimer);
+  }, []);
 
   const filteredViolations = violations.filter(v => {
     if (filters.ward && v.ward !== filters.ward) return false;
